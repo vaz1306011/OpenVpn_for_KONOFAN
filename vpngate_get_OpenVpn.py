@@ -1,77 +1,68 @@
+import configparser
+import os
+
 import requests
 from bs4 import BeautifulSoup
-import os
-import configparser
 
+if __name__ == "__main__":
+    target_country = "Japan"
+    black_list = ["219.100."]
+    n = int(input("輸入編號:"))
 
-def main():
-    print("正在載入數據...", end='')
-    target_country = 'Japan'
-    vpngate = requests.get('https://www.vpngate.net/cn/')
-    soup = BeautifulSoup(vpngate.text, 'html.parser')
-    os.system("cls")
-    n = int(input('輸入編號:'))
+    url = "https://www.vpngate.net/cn/"
+    vpngate = requests.get(url)
+    soup = BeautifulSoup(vpngate.text, "html.parser")
 
-    def get_countries(html):
-        countries = []
-        for i in range(30, len(html), 10):
-            countries.append(html[i].text)
-        return tuple(countries)
+    count = 0
+    rows = soup.select("#vpngate_main_table")[0].find_all("tr")[17:]
+    for row in rows:
+        tds = row.find_all("td")
 
-    if n % 2:
-        n = (n-1)//2
-        vpn_download_url = soup.select("td.vg_table_row_1 a")
-        country = get_countries(soup.select("td.vg_table_row_1"))
+        # 檢查國家
+        if tds[0].text != target_country:
+            continue
+
+        # 檢查 有沒有openvpn
+        if "OpenVPN" not in tds[6].text:
+            continue
+
+        # 檢查黑名單
+        ip = tds[1].find_all("span")[1].text
+        if all([ip.startswith(i) for i in black_list]):
+            continue
+
+        count += 1
+        if count >= n:
+            break
     else:
-        n = n//2-1
-        vpn_download_url = soup.select("td.vg_table_row_0 a")
-        country = get_countries(soup.select("td.vg_table_row_0"))
+        print("沒有符合的ip")
+        exit()
 
-    def find_ip(href: str):
-        start = href.find('&ip=')+4
-        end = href.find('&', start)
-        return href[start:end]
-
-    column = -1  # 行
-    conform = -1  # 配對成功次數
-    for t in vpn_download_url:
-        if t.text == 'OpenVPN配置文件':
-            column += 1
-            ip = find_ip(t['href'])
-            if ip.startswith('219.100.') or country[column] != target_country:
-                continue
-            conform += 1
-            if conform == n:
-                url = 'https://www.vpngate.net/cn/' + t['href']
-                break
-    print(f"IP:{ip}")
-
-    openvpn = requests.get(url)
-    soup = BeautifulSoup(openvpn.text, 'html.parser')
+    download_url = url + tds[6].a["href"]
+    openvpn = requests.get(download_url)
+    soup = BeautifulSoup(openvpn.text, "html.parser")
     ovpn = soup.select("ul.listBigArrow li a")
 
     def get_url(ovpn):
         for t in ovpn:
-            if 'TCP' in str(t.strong):
-                return 'https://www.vpngate.net/'+t['href']
-        else:
-            for t in ovpn:
-                if 'UDP' in str(t.strong):
-                    return 'https://www.vpngate.net/'+t['href']
+            if "TCP" in str(t.text):
+                return url + t["href"]
 
-    url = get_url(ovpn)
-    file = requests.get(url)
+        for t in ovpn:
+            if "UDP" in str(t.text):
+                return url + t["href"]
+
+    file = requests.get(get_url(ovpn))
     config = configparser.ConfigParser()
-    config.read('address.ini', encoding='utf-8')
-    address = config['address']['address']
-    with open(address, 'wb') as fp:
+    config.read("address.ini", encoding="utf-8")
+    address = config["address"]["address"]
+    with open(address, "wb") as fp:
         fp.write(file.content)
         fp.write(
-            'route-nopull\ndhcp-option DNS 8.8.8.8\nroute api.konosubafd.jp\nroute static.konosubafd.jp'.encode())
-    print(f'已輸出至 {address}')
+            "route-nopull\ndhcp-option DNS 8.8.8.8\nroute api.konosubafd.jp\nroute static.konosubafd.jp".encode()
+        )
+
+    print(f"IP:{ip}")
+    print(f"已輸出至 {address}")
 
     os.system("pause")
-
-
-if __name__ == "__main__":
-    main()

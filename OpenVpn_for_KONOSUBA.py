@@ -9,8 +9,8 @@ if __name__ == "__main__":
     black_list = ["219.100."]
     n = int(input("輸入編號:"))
 
-    url = "https://www.vpngate.net/cn/"
-    vpngate = requests.get(url)
+    URL = "https://www.vpngate.net/"
+    vpngate = requests.get(URL + "cn/")
     soup = BeautifulSoup(vpngate.text, "html.parser")
 
     count = 0
@@ -38,19 +38,19 @@ if __name__ == "__main__":
         print("沒有符合的ip")
         exit()
 
-    download_url = url + tds[6].a["href"]
+    download_url = URL + "cn/" + tds[6].a["href"]
     openvpn = requests.get(download_url)
     soup = BeautifulSoup(openvpn.text, "html.parser")
     ovpn = soup.select("ul.listBigArrow li a")
 
     def get_url(ovpn):
         for t in ovpn:
-            if "TCP" in str(t.text):
-                return url + t["href"]
+            if "TCP" in str(t.strong):
+                return URL + t["href"]
 
         for t in ovpn:
-            if "UDP" in str(t.text):
-                return url + t["href"]
+            if "UDP" in str(t.strong):
+                return URL + t["href"]
 
     file = requests.get(get_url(ovpn))
     config = configparser.ConfigParser()

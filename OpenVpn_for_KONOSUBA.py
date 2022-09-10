@@ -7,15 +7,12 @@ from bs4 import BeautifulSoup
 if __name__ == "__main__":
     n = int(input("輸入編號:"))
 
-    # 讀取網頁
     URL = "https://www.vpngate.net/"
     URL_CN = "https://www.vpngate.net/cn/"
+
+    # 讀取網頁
     vpngate = requests.get(URL_CN)
     soup = BeautifulSoup(vpngate.text, "html.parser")
-
-    # 讀取設定檔
-    config = configparser.ConfigParser()
-    config.read("config.ini", encoding="utf-8")
 
     # 尋找資料
     count = 0
@@ -29,7 +26,7 @@ if __name__ == "__main__":
         if tds[0].text != target_country:
             continue
 
-        # 檢查 有沒有openvpn
+        # 檢查有沒有openvpn
         if "OpenVPN" not in tds[6].text:
             continue
 
@@ -60,6 +57,10 @@ if __name__ == "__main__":
     links = BeautifulSoup(openvpn.text, "html.parser").select("ul.listBigArrow li a")
     download_url = get_download_url(links)
     file = requests.get(download_url)
+
+    # 讀取設定檔
+    config = configparser.ConfigParser()
+    config.read("config.ini", encoding="utf-8")
 
     # 寫入檔案
     path = config.get("config", "path")

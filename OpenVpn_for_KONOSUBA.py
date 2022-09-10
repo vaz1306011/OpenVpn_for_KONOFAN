@@ -7,13 +7,17 @@ from bs4 import BeautifulSoup
 if __name__ == "__main__":
     n = int(input("輸入編號:"))
 
+    # 讀取網頁
     URL = "https://www.vpngate.net/"
     URL_CN = "https://www.vpngate.net/cn/"
     vpngate = requests.get(URL_CN)
     soup = BeautifulSoup(vpngate.text, "html.parser")
+
+    # 讀取設定檔
     config = configparser.ConfigParser()
     config.read("config.ini", encoding="utf-8")
 
+    # 尋找資料
     count = 0
     rows = soup.select("#vpngate_main_table")[0].find_all("tr")[17:]
     target_country = "Japan"
@@ -41,21 +45,23 @@ if __name__ == "__main__":
         print("沒有符合的ip")
         exit()
 
-    download_url = URL_CN + tds[6].a["href"]
-    openvpn = requests.get(download_url)
-    soup = BeautifulSoup(openvpn.text, "html.parser")
-    ovpn = soup.select("ul.listBigArrow li a")
-
-    def get_url(ovpn):
-        for t in ovpn:
-            if "TCP" in str(t.text):
+    # 下載檔案
+    def get_download_url(links):
+        for t in links:
+            if "TCP" in t.text:
                 return URL + t["href"]
 
-        for t in ovpn:
-            if "UDP" in str(t.text):
+        for t in links:
+            if "UDP" in t.text:
                 return URL + t["href"]
 
-    file = requests.get(get_url(ovpn))
+    openvpn_url = URL_CN + tds[6].a["href"]
+    openvpn = requests.get(openvpn_url)
+    links = BeautifulSoup(openvpn.text, "html.parser").select("ul.listBigArrow li a")
+    download_url = get_download_url(links)
+    file = requests.get(download_url)
+
+    # 寫入檔案
     path = config.get("config", "path")
     with open(path, "wb") as fp:
         fp.write(file.content)

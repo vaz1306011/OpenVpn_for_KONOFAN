@@ -36,7 +36,6 @@ class VpnGate:
         rows = soup.select("#vpngate_main_table")[0].find_all("tr")[17:]
         for row in rows:
             tds = row.find_all("td")
-            print(tds)
 
             # 檢查國家
             if tds[0].text not in countrys:
